@@ -143,15 +143,15 @@ jobs:
               echo "::error::$apk is signed with the Android Debug certificate — refusing to publish."
               exit 1
             fi
-            if ! grep -qi "Verified using v1 scheme" /tmp/certs.txt; then
-              echo "::error::$apk is not v1-signed (JAR signing)."
+            if ! grep -qi 'Verified using v1 scheme.*: true' /tmp/certs.txt; then
+              echo "::error::$apk is not v1-signed (JAR signing) — apksigner reported v1 = false."
               exit 1
             fi
-            if ! grep -qi "Verified using v2 scheme" /tmp/certs.txt; then
-              echo "::error::$apk is not v2-signed (APK Signature Scheme v2)."
+            if ! grep -qi 'Verified using v2 scheme.*: true' /tmp/certs.txt; then
+              echo "::error::$apk is not v2-signed (APK Signature Scheme v2) — apksigner reported v2 = false."
               exit 1
             fi
-            if grep -qi "Verified using v3 scheme" /tmp/certs.txt; then
+            if grep -qi 'Verified using v3 scheme.*: true' /tmp/certs.txt; then
               echo "OK: v3-signed (APK Signature Scheme v3)"
             else
               echo "::warning::$apk is not v3-signed (acceptable but not preferred)."

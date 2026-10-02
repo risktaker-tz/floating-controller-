@@ -34,6 +34,11 @@ android {
             storePassword = keystoreProperties["storePassword"] as String?
             keyAlias = keystoreProperties["keyAlias"] as String?
             keyPassword = keystoreProperties["keyPassword"] as String?
+            // Per task: v1 + v2 + v3 (where supported) signing all enabled.
+            // PKCS12 with RSA-4096 supports v3.
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
