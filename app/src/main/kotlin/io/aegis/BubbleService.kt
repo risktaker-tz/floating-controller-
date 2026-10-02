@@ -1,0 +1,9 @@
+package io.aegis
+import android.app.*
+import android.content.*
+import android.graphics.*
+import android.os.IBinder
+import android.provider.Settings
+import android.view.*
+import android.widget.*
+class BubbleService:Service(){lateinit var wm:WindowManager;var v:View?=null;override fun onCreate(){super.onCreate();val nm=getSystemService(NOTIFICATION_SERVICE)as NotificationManager;nm.createNotificationChannel(NotificationChannel("a","Aegis",NotificationManager.IMPORTANCE_LOW));startForeground(7,Notification.Builder(this,"a").setSmallIcon(android.R.drawable.ic_menu_view).setContentTitle("Aegis • DEMO").setContentText("Observation active; actions stopped").build());if(!Settings.canDrawOverlays(this)){stopSelf();return};wm=getSystemService(WINDOW_SERVICE)as WindowManager;val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(20,15,20,15);setBackgroundColor(Color.rgb(7,25,28))};val h=TextView(this).apply{text="◉ AEGIS • DEMO";setTextColor(Color.rgb(85,230,188));textSize=16f};val d=TextView(this).apply{text="Target: observe\nMapping: required\nStatus: READY";setTextColor(Color.WHITE);visibility=View.GONE};box.addView(h);box.addView(d);h.setOnClickListener{d.visibility=if(d.visibility==View.GONE)View.VISIBLE else View.GONE};val p=WindowManager.LayoutParams(-2,-2,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT).apply{gravity=Gravity.TOP or Gravity.START;x=20;y=180};var dx=0f;var dy=0f;var ox=0;var oy=0;h.setOnTouchListener{_,e->when(e.action){0->{dx=e.rawX;dy=e.rawY;ox=p.x;oy=p.y;true};2->{p.x=ox+(e.rawX-dx).toInt();p.y=oy+(e.rawY-dy).toInt();wm.updateViewLayout(box,p);true};1->{if(kotlin.math.abs(e.rawX-dx)<8)h.performClick();true};else->false}};v=box;wm.addView(box,p)};override fun onDestroy(){v?.let{wm.removeView(it)}};override fun onBind(i:Intent?):IBinder?=null}

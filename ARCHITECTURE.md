@@ -1,0 +1,2 @@
+# Architecture
+Accessibility events produce normalized candidates; confidence classification and repeated-structure association create package/fingerprint-bound mappings. Decimal progression, per-panel locks, duplicate keys, watchdog checks, and UNKNOWN-safe outcomes gate actions. Sending an action is never treated as success. Room stores state, mappings, active actions, and sanitized events. Mock and Android adapters remain separate.

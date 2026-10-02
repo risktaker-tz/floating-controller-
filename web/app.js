@@ -1,0 +1,1 @@
+document.querySelector('#status').textContent='DEMO default • source available';
