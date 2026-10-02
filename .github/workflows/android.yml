@@ -193,7 +193,7 @@ jobs:
             echo "OK: zipalign passed"
             echo "----------------------------------------------------------"
             echo "[2/4] apksigner verify --verbose --print-certs"
-            "$APKSIGNER" verify --verbose --print-certs --min-sdk-version 26 "$apk" | tee /tmp/certs.txt
+            "$APKSIGNER" verify --verbose --print-certs --min-sdk-version 23 "$apk" | tee /tmp/certs.txt
             if grep -qi "Android Debug" /tmp/certs.txt; then
               echo "::error::$apk is signed with the Android Debug certificate — refusing to publish."
               exit 1
@@ -236,7 +236,7 @@ jobs:
           set -euo pipefail
           SDK="$ANDROID_HOME"
           APKSIGNER="$SDK/build-tools/$BUILD_TOOLS_VERSION/apksigner"
-          "$APKSIGNER" verify --print-certs --min-sdk-version 26 release/aegis-controller.apk > /tmp/certs_full.txt 2>&1 || true
+          "$APKSIGNER" verify --print-certs --min-sdk-version 23 release/aegis-controller.apk > /tmp/certs_full.txt 2>&1 || true
           CERT_SHA256=$(grep -E 'SHA-256 digest:' /tmp/certs_full.txt | head -1 | sed -E 's/.*SHA-256 digest: //; s/[^0-9A-Fa-f:]//g')
           if [ -z "$CERT_SHA256" ]; then
             echo "::error::Could not extract signing cert SHA-256."
@@ -392,7 +392,7 @@ jobs:
           echo "OK: downloaded controller APK matches locally-verified APK."
           echo "=== apksigner verify on downloaded APK ==="
           APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner"
-          "$APKSIGNER" verify --verbose --print-certs --min-sdk-version 26 aegis-controller.apk | tee /tmp/downloaded_certs.txt
+          "$APKSIGNER" verify --verbose --print-certs --min-sdk-version 23 aegis-controller.apk | tee /tmp/downloaded_certs.txt
           if grep -qi "Android Debug" /tmp/downloaded_certs.txt; then
             echo "::error::Downloaded APK is signed with the Android Debug certificate."
             exit 1
