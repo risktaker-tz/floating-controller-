@@ -1,0 +1,30 @@
+# Gradle / build outputs
+.gradle/
+build/
+*/build/
+**/build/
+
+# Local configuration (SDK paths, secrets, etc.)
+local.properties
+
+# APKs and other build binaries — never commit these to the source tree
+*.apk
+*.ap_
+*.dex
+*.class
+
+# IDE and editor files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Gradle cache
+.gradle-cache/
+
+# Logs
+*.log

@@ -11,9 +11,7 @@ After uploading this full repository to `main`, GitHub Actions builds and publis
 
 Phone download page:
 
-https://github.com/risktaker-tz/aegis-floating-controller/releases/tag/latest
-
-Before the first build, open **Settings → Actions → General → Workflow permissions**, select **Read and write permissions**, and save. Then run **Actions → Build downloadable Android APKs**.
+https://github.com/risktaker-tz/floating-controller-/releases/tag/latest
 
 ## Local verification
 
