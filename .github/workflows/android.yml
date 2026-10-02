@@ -213,71 +213,7 @@ jobs:
           # (dash on Ubuntu), which does NOT support `set -o pipefail`. Use POSIX
           # `set -eu` instead. The action also disables Linux hardware acceleration
           # by default if /dev/kvm is not accessible; boot takes ~7 min without KVM.
-          script: |
-            set -eu
-            EXPECTED_CERT="${{ steps.cert.outputs.cert_sha256 }}"
-            echo "Expected release cert SHA-256: $EXPECTED_CERT"
-            for apk_label in controller mock; do
-              if [ "$apk_label" = "controller" ]; then
-                APK="$GITHUB_WORKSPACE/release/aegis-controller.apk"
-                PKG="io.aegis"
-                ACTIVITY="io.aegis/.MainActivity"
-              else
-                APK="$GITHUB_WORKSPACE/release/aegis-mock-target.apk"
-                PKG="io.aegis.mock"
-                ACTIVITY="io.aegis.mock/.MainActivity"
-              fi
-              echo "=========================================================="
-              echo "Emulator install + launch: $apk_label ($PKG)"
-              echo "----------------------------------------------------------"
-              echo "adb install -r $APK"
-              # /usr/bin/sh (dash) does not support PIPESTATUS or pipefail.
-              # Use redirect+cat so INSTALL_RC captures adb's real exit code
-              # (not tee's), per task: "Capture the exact Package Manager error if installation fails."
-              adb install -r "$APK" > /tmp/install_$apk_label.log 2>&1
-              INSTALL_RC=$?
-              cat /tmp/install_$apk_label.log
-              if [ $INSTALL_RC -ne 0 ]; then
-                echo "::error::adb install failed for $apk_label (exit $INSTALL_RC). Exact Package Manager output above."
-                exit 1
-              fi
-              echo "----------------------------------------------------------"
-              echo "adb shell pm path $PKG"
-              INSTALLED_PATH=$(adb shell pm path "$PKG" | head -1 | sed 's/^package://')
-              if [ -z "$INSTALLED_PATH" ]; then
-                echo "::error::$PKG is not present after install (pm path empty)."
-                exit 1
-              fi
-              echo "Installed at: $INSTALLED_PATH"
-              echo "----------------------------------------------------------"
-              echo "adb shell am start -W -n $ACTIVITY"
-              adb shell am start -W -n "$ACTIVITY" | tee /tmp/launch_$apk_label.log
-              sleep 5
-              echo "----------------------------------------------------------"
-              echo "Recent logcat (errors only, last 300 lines):"
-              adb logcat -d -t 300 *:E | tail -80 || true
-              if adb shell dumpsys activity activities 2>/dev/null | grep -q "$PKG"; then
-                echo "OK: $PKG is in the activity task stack — launch succeeded."
-              else
-                echo "::error::$PKG did not appear in activity task stack — launch failed or crashed immediately."
-                exit 1
-              fi
-              echo "----------------------------------------------------------"
-              echo "Installed cert vs expected release cert"
-              adb pull "$INSTALLED_PATH" /tmp/installed_$apk_label.apk 2>&1 | tail -1
-              INSTALLED_CERT=$("$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" verify --print-certs --min-sdk-version 26 /tmp/installed_$apk_label.apk 2>&1 | grep -E 'SHA-256 digest:' | head -1 | sed -E 's/.*SHA-256 digest: //; s/[^0-9A-Fa-f:]//g')
-              echo "Installed cert SHA-256: $INSTALLED_CERT"
-              echo "Expected  cert SHA-256: $EXPECTED_CERT"
-              if [ -z "$INSTALLED_CERT" ] || [ "$INSTALLED_CERT" != "$EXPECTED_CERT" ]; then
-                echo "::error::Installed cert does not match expected release cert for $apk_label."
-                exit 1
-              fi
-              echo "OK: installed cert matches expected release cert."
-              adb uninstall "$PKG" >/dev/null 2>&1 || true
-            done
-            echo "=========================================================="
-            echo "Emulator smoke test PASSED for both APKs."
-
+          script: EXPECTED_CERT="${{ steps.cert.outputs.cert_sha256 }}" bash "$GITHUB_WORKSPACE/scripts/emulator_local_apk.sh"
       - name: Upload build artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -420,40 +356,7 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: |
-            set -eu
-            EXPECTED_CERT="${{ steps.cert.outputs.cert_sha256 }}"
-            APK="/tmp/downloaded/aegis-controller.apk"
-            echo "Installing downloaded asset: $APK"
-            # /usr/bin/sh (dash) does not support PIPESTATUS or pipefail.
-            adb install -r "$APK" > /tmp/dl_install.log 2>&1
-            INSTALL_RC=$?
-            cat /tmp/dl_install.log
-            if [ $INSTALL_RC -ne 0 ]; then
-              echo "::error::Downloaded asset failed to install (exit $INSTALL_RC). Exact Package Manager output above."
-              exit 1
-            fi
-            adb shell pm path io.aegis
-            adb shell am start -W -n io.aegis/.MainActivity | tee /tmp/dl_launch.log
-            sleep 5
-            adb logcat -d -t 200 *:E | tail -50 || true
-            if adb shell dumpsys activity activities 2>/dev/null | grep -q "io.aegis"; then
-              echo "OK: downloaded asset launches successfully on a fresh emulator."
-            else
-              echo "::error::Downloaded asset did not appear in activity task stack."
-              exit 1
-            fi
-            adb pull "$(adb shell pm path io.aegis | head -1 | sed 's/^package=//')" /tmp/dl_installed.apk 2>&1 | tail -1
-            DL_CERT=$("$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" verify --print-certs --min-sdk-version 26 /tmp/dl_installed.apk 2>&1 | grep -E 'SHA-256 digest:' | head -1 | sed -E 's/.*SHA-256 digest: //; s/[^0-9A-Fa-f:]//g')
-            echo "Downloaded+installed cert: $DL_CERT"
-            echo "Expected release cert     : $EXPECTED_CERT"
-            if [ -z "$DL_CERT" ] || [ "$DL_CERT" != "$EXPECTED_CERT" ]; then
-              echo "::error::Downloaded+installed asset cert does not match expected release cert."
-              exit 1
-            fi
-            echo "OK: downloaded asset cert matches expected release cert."
-            adb uninstall io.aegis >/dev/null 2>&1 || true
-
+          script: EXPECTED_CERT="${{ steps.cert.outputs.cert_sha256 }}" bash "$GITHUB_WORKSPACE/scripts/emulator_downloaded_apk.sh"
       # Always clean up signing material, even on failure.
       - name: Cleanup signing material
         if: always()
