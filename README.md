@@ -30,17 +30,28 @@ The workflow refuses to fall back to debug signing when these secrets are missin
 
 ## Local verification
 
-Requires JDK 17 and Android SDK 35. The release build requires a `keystore.properties` file at the repo root (gitignored) pointing at a local keystore:
+Requires JDK 17 and Android SDK 35. With `signingConfig` intentionally not set in `build.gradle.kts` (see comments there — AGP 8.7.x silently ignores `enableV1Signing` for `minSdkVersion >= 24`), `assembleRelease` produces an **unsigned** release APK. The CI workflow then signs it directly with `apksigner sign --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true` to force all three signing schemes.
 
-```
-storeFile=/absolute/path/to/aegis-release.keystore
-storePassword=…
-keyAlias=aegis-release
-keyPassword=…
-```
+For local verification (no signing required):
 
 ```bash
 gradle :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:bundleRelease :mock-target:lintRelease :mock-target:assembleRelease
+```
+
+To produce a signed APK locally (after running `scripts/setup-signing.sh` once to create and upload your keystore to GitHub Secrets, then downloading the keystore to `/tmp/aegis.keystore`):
+
+```bash
+APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+"$APKSIGNER" sign \
+  --ks /tmp/aegis.keystore \
+  --ks-pass pass:YOUR_KS_PASSWORD \
+  --ks-key-alias aegis-release \
+  --key-pass pass:YOUR_KEY_PASSWORD \
+  --v1-signing-enabled true \
+  --v2-signing-enabled true \
+  --v3-signing-enabled true \
+  --out app/build/outputs/apk/release/app-release.apk \
+  app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
 Grant overlay and accessibility permissions; install the mock target; map controls; keep DEMO selected. The app does not bypass authentication, CAPTCHA, anti-bot controls, or Android security, stores no credentials, and has no hard-coded SportyBet selectors. Live SportyBet operation is not claimed verified until its Android accessibility hierarchy and state transitions are captured and tested.

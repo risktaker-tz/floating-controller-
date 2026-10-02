@@ -1,19 +1,8 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.kapt")
-}
-
-// Optional keystore.properties in root project (gitignored). Created by CI
-// from repository secrets. When absent, release builds produce an UNSIGNED
-// APK and the CI signature-verification gate fails safely — there is no
-// debug fallback.
-val keystoreProperties = Properties().apply {
-    rootProject.file("keystore.properties").takeIf { it.exists() }?.let { load(FileInputStream(it)) }
 }
 
 android {
@@ -28,25 +17,16 @@ android {
     }
     buildFeatures { compose = true }
 
-    signingConfigs {
-        create("release") {
-            (keystoreProperties["storeFile"] as? String)?.let { storeFile = file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            // Per task: v1 + v2 + v3 (where supported) signing all enabled.
-            // PKCS12 with RSA-4096 supports v3.
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
-        }
-    }
-
     buildTypes {
         getByName("release") {
             isDebuggable = false
             isMinifyEnabled = false
-            signingConfig = signingConfigs.findByName("release")
+            // signingConfig is intentionally NOT set here. AGP 8.7.x silently
+            // ignores enableV1Signing=true when minSdkVersion >= 24, so we
+            // cannot rely on AGP to produce a v1 (JAR) signature. Instead,
+            // the CI workflow runs `apksigner sign --v1-signing-enabled true
+            // --v2-signing-enabled true --v3-signing-enabled true` directly
+            // on the unsigned APK after assembleRelease.
         }
     }
 }

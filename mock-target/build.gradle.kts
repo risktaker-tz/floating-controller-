@@ -1,14 +1,7 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-}
-
-val keystoreProperties = Properties().apply {
-    rootProject.file("keystore.properties").takeIf { it.exists() }?.let { load(FileInputStream(it)) }
 }
 
 android {
@@ -23,23 +16,13 @@ android {
     }
     buildFeatures { compose = true }
 
-    signingConfigs {
-        create("release") {
-            (keystoreProperties["storeFile"] as? String)?.let { storeFile = file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
-        }
-    }
-
     buildTypes {
         getByName("release") {
             isDebuggable = false
             isMinifyEnabled = false
-            signingConfig = signingConfigs.findByName("release")
+            // signingConfig intentionally NOT set — CI uses apksigner directly
+            // to enable v1+v2+v3 signing (AGP 8.7.x ignores enableV1Signing=true
+            // for minSdkVersion >= 24).
         }
     }
 }
