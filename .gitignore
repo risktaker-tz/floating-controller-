@@ -7,11 +7,20 @@ build/
 # Local configuration (SDK paths, secrets, etc.)
 local.properties
 
+# Release signing material — NEVER commit these to the source tree.
+# The CI workflow decodes the keystore from GitHub Secrets into a temporary
+# path on the runner and writes keystore.properties pointing to it.
+keystore.properties
+*.keystore
+*.jks
+*.keystore.bak
+
 # APKs and other build binaries — never commit these to the source tree
 *.apk
 *.ap_
 *.dex
 *.class
+*.aab
 
 # IDE and editor files
 .idea/
