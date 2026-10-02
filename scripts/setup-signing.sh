@@ -47,40 +47,43 @@ if [ -f "$KEYSTORE_FILE" ]; then
   exit 1
 fi
 
-read -s -r -p "Keystore password (>= 6 chars): " KS_PASS; echo
-read -s -r -p "Confirm keystore password: " KS_PASS2; echo
-[ "$KS_PASS" = "$KS_PASS2" ] || { echo "ERROR: passwords do not match." >&2; exit 1; }
-[ "${#KS_PASS}" -ge 6 ]      || { echo "ERROR: password too short." >&2; exit 1; }
-
-read -s -r -p "Key password (>= 6 chars): " KEY_PASS; echo
-read -s -r -p "Confirm key password: " KEY_PASS2; echo
-[ "$KEY_PASS" = "$KEY_PASS2" ] || { echo "ERROR: passwords do not match." >&2; exit 1; }
-[ "${#KEY_PASS}" -ge 6 ]      || { echo "ERROR: password too short." >&2; exit 1; }
+read -s -r -p "Signing password (>= 6 chars; used for both keystore and key): " PASS; echo
+read -s -r -p "Confirm signing password: " PASS2; echo
+[ "$PASS" = "$PASS2" ] || { echo "ERROR: passwords do not match." >&2; exit 1; }
+[ "${#PASS}" -ge 6 ]    || { echo "ERROR: password too short." >&2; exit 1; }
 
 echo
-echo "Generating keystore: $KEYSTORE_FILE"
+echo "Generating PKCS12 keystore: $KEYSTORE_FILE"
 DN="CN=Aegis Floating Controller Release,O=Aegis,C=US"
+# PKCS12 does not support different store/key passwords, so we use one
+# password for both. Use -storepass:env / -keypass:env to keep the
+# password out of the process listing.
+export KS_PASS="$PASS"
 keytool -genkeypair \
   -keystore "$KEYSTORE_FILE" \
-  -storepass "$KS_PASS" \
+  -storetype PKCS12 \
+  -storepass:env KS_PASS \
   -alias "$ALIAS" \
-  -keypass "$KEY_PASS" \
+  -keypass:env KS_PASS \
   -keyalg RSA -keysize 4096 -sigalg SHA256withRSA \
   -validity "$VALIDITY_DAYS" \
   -dname "$DN"
+unset KS_PASS
 
 echo "Keystore generated. Certificate fingerprints:"
-keytool -list -v -keystore "$KEYSTORE_FILE" -storepass "$KS_PASS" -alias "$ALIAS" | grep -iE "SHA-256|SHA-1|Owner"
+export KS_PASS="$PASS"
+keytool -list -v -keystore "$KEYSTORE_FILE" -storepass:env KS_PASS -alias "$ALIAS" | grep -iE "SHA-256|SHA-1|Owner"
+unset KS_PASS
 
 echo
 echo "Uploading 4 secrets to GitHub repository: $REPO"
 KEYSTORE_BASE64="$(base64 -w 0 < "$KEYSTORE_FILE")"
 
 # Pipe each value through stdin so it does not appear in the process table.
-printf '%s' "$KEYSTORE_BASE64" | gh secret set AEGIS_KEYSTORE_BASE64     --repo "$REPO"
-printf '%s' "$KS_PASS"          | gh secret set AEGIS_KEYSTORE_PASSWORD   --repo "$REPO"
-printf '%s' "$ALIAS"            | gh secret set AEGIS_KEY_ALIAS            --repo "$REPO"
-printf '%s' "$KEY_PASS"         | gh secret set AEGIS_KEY_PASSWORD        --repo "$REPO"
+printf '%s' "$KEYSTORE_BASE64" | gh secret set AEGIS_KEYSTORE_BASE64   --repo "$REPO"
+printf '%s' "$PASS"            | gh secret set AEGIS_KEYSTORE_PASSWORD --repo "$REPO"
+printf '%s' "$ALIAS"           | gh secret set AEGIS_KEY_ALIAS         --repo "$REPO"
+printf '%s' "$PASS"            | gh secret set AEGIS_KEY_PASSWORD      --repo "$REPO"
 
 echo
 echo "All 4 secrets uploaded to GitHub repository: $REPO"
