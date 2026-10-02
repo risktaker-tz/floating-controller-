@@ -209,8 +209,12 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
+          # The reactivecircus/android-emulator-runner runs `script:` via /usr/bin/sh
+          # (dash on Ubuntu), which does NOT support `set -o pipefail`. Use POSIX
+          # `set -eu` instead. The action also disables Linux hardware acceleration
+          # by default if /dev/kvm is not accessible; boot takes ~7 min without KVM.
           script: |
-            set -euo pipefail
+            set -eu
             EXPECTED_CERT="${{ steps.cert.outputs.cert_sha256 }}"
             echo "Expected release cert SHA-256: $EXPECTED_CERT"
             for apk_label in controller mock; do
@@ -227,10 +231,12 @@ jobs:
               echo "Emulator install + launch: $apk_label ($PKG)"
               echo "----------------------------------------------------------"
               echo "adb install -r $APK"
-              set +e
-              adb install -r "$APK" 2>&1 | tee /tmp/install_$apk_label.log
+              # /usr/bin/sh (dash) does not support PIPESTATUS or pipefail.
+              # Use redirect+cat so INSTALL_RC captures adb's real exit code
+              # (not tee's), per task: "Capture the exact Package Manager error if installation fails."
+              adb install -r "$APK" > /tmp/install_$apk_label.log 2>&1
               INSTALL_RC=$?
-              set -e
+              cat /tmp/install_$apk_label.log
               if [ $INSTALL_RC -ne 0 ]; then
                 echo "::error::adb install failed for $apk_label (exit $INSTALL_RC). Exact Package Manager output above."
                 exit 1
@@ -415,14 +421,14 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             EXPECTED_CERT="${{ steps.cert.outputs.cert_sha256 }}"
             APK="/tmp/downloaded/aegis-controller.apk"
             echo "Installing downloaded asset: $APK"
-            set +e
-            adb install -r "$APK" 2>&1 | tee /tmp/dl_install.log
+            # /usr/bin/sh (dash) does not support PIPESTATUS or pipefail.
+            adb install -r "$APK" > /tmp/dl_install.log 2>&1
             INSTALL_RC=$?
-            set -e
+            cat /tmp/dl_install.log
             if [ $INSTALL_RC -ne 0 ]; then
               echo "::error::Downloaded asset failed to install (exit $INSTALL_RC). Exact Package Manager output above."
               exit 1
