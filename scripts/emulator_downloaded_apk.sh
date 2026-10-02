@@ -22,7 +22,7 @@ else
   echo "::error::Downloaded asset did not appear in activity task stack."
   exit 1
 fi
-adb pull "$(adb shell pm path io.aegis | head -1 | sed 's/^package=//')" /tmp/dl_installed.apk 2>&1 | tail -1
+adb pull "$(adb shell pm path io.aegis | head -1 | sed 's/^package://')" /tmp/dl_installed.apk 2>&1 | tail -1
 DL_CERT=$("$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" verify --print-certs --min-sdk-version 26 /tmp/dl_installed.apk 2>&1 | grep -E 'SHA-256 digest:' | head -1 | sed -E 's/.*SHA-256 digest: //; s/[^0-9A-Fa-f:]//g')
 echo "Downloaded+installed cert: $DL_CERT"
 echo "Expected release cert     : $EXPECTED_CERT"
